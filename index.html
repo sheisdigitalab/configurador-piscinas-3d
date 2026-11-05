@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Configurador de piscinas 3D</title>
-<meta name="description" content="Diseña una piscina en 3D, elige acabados y obtén un presupuesto estimado al instante.">
+<title>Configurador de piscinas</title>
+<meta name="description" content="Coloca una piscina sobre la foto de tu jardín, elige acabados y obtén un presupuesto estimado al instante.">
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,18 +14,61 @@
     <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="8" fill="currentColor"/><path d="M7 19c3 0 3-3 6-3s3 3 6 3 3-3 6-3M7 24c3 0 3-3 6-3s3 3 6 3 3-3 6-3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
     <b id="brandName"></b><span id="brandTag"></span>
   </div>
+  <div class="modes seg" id="modes" role="group" aria-label="Vista">
+    <button type="button" data-mode="photo" aria-pressed="true">Sobre mi foto</button>
+    <button type="button" data-mode="orbit" aria-pressed="false">Vista 3D</button>
+  </div>
   <span class="proto">Prototipo con precios de ejemplo</span>
 </header>
 
-<main class="app">
+<main class="app" id="app" data-mode="photo">
   <div class="viewport" id="viewport">
+    <!-- Vista 3D libre -->
     <canvas id="gl" aria-label="Vista 3D de la piscina"></canvas>
-    <div class="hint" id="hint">Arrastra para girar · Rueda para acercar</div>
-    <div class="loading" id="loading">Cargando escena…</div>
+    <!-- Piscina sobre foto -->
+    <div class="stage" id="stage">
+      <img id="photo" alt="Foto del jardín" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
+      <canvas id="glp" aria-label="Piscina sobre la foto"></canvas>
+      <canvas id="fg" aria-hidden="true"></canvas>
+      <svg id="overlay" aria-label="Esquinas del suelo"><polygon id="quad" points=""/></svg>
+      <div class="chip" id="chip" role="status"></div>
+    </div>
+    <div class="hint" id="hint"></div>
+    <div class="loading" id="loading">Cargando…</div>
   </div>
 
   <aside class="panel" aria-label="Configuración de la piscina">
     <div class="scroll">
+      <section class="photo-only" id="secPhoto">
+        <h2>Foto</h2>
+        <label class="btn primary file-btn">Hacer foto / Subir foto<input id="fileCam" type="file" accept="image/*" capture="environment" hidden></label>
+        <label class="gallery">Elegir de la galería<input id="fileGal" type="file" accept="image/*" hidden></label>
+        <div class="samples" id="samples" role="group" aria-label="Fotos de ejemplo"></div>
+        <ol class="steps"><li>Sube o haz una foto del jardín.</li><li>Marca las 4 esquinas del suelo donde irá la piscina. Puedes arrastrarlas.</li><li>Ajusta medidas y acabados en el panel.</li></ol>
+        <div class="tools">
+          <button class="btn sm" id="btnRemark" type="button">Volver a marcar los puntos</button>
+          <label class="check"><input id="chkRotate" type="checkbox"> El largo va hacia el fondo</label>
+        </div>
+        <div class="size">
+          <div class="row"><span>Dirección del sol</span><span class="num"><output id="oSun">215°</output></span></div>
+          <input id="rSun" type="range" min="0" max="359" step="1" value="215" aria-label="Dirección del sol">
+        </div>
+        <div class="size">
+          <div class="row"><span>Intensidad de la luz</span><span class="num"><output id="oLight">100 %</output></span></div>
+          <input id="rLight" type="range" min="50" max="160" step="1" value="100" aria-label="Intensidad de la luz">
+        </div>
+        <div class="brush">
+          <div class="row"><span>Objetos delante de la piscina</span></div>
+          <p class="muted small">Pinta sobre lo que debe quedar por delante (una planta, una silla…).</p>
+          <div class="seg" id="tools" role="group" aria-label="Herramienta">
+            <button type="button" data-tool="points" aria-pressed="true">Puntos</button>
+            <button type="button" data-tool="paint" aria-pressed="false">Pintar</button>
+            <button type="button" data-tool="erase" aria-pressed="false">Borrar</button>
+          </div>
+          <div class="size"><div class="row"><span>Tamaño del pincel</span><span class="num"><output id="oBrush">40 px</output></span></div><input id="rBrush" type="range" min="10" max="140" step="1" value="40" aria-label="Tamaño del pincel"></div>
+          <button class="btn sm" id="btnClearMask" type="button">Quitar zonas pintadas</button>
+        </div>
+      </section>
       <section>
         <h2>Forma</h2>
         <div class="shapes" id="shapes" role="group" aria-label="Forma de la piscina"></div>
@@ -83,7 +126,7 @@
     <dl class="specs" id="dlgSpecs"></dl>
     <div class="table-wrap"><table id="dlgTable"></table></div>
     <div class="totals" id="dlgTotals"></div>
-    <p class="muted small">Presupuesto orientativo con precios de ejemplo. Las cantidades son estimaciones a partir del diseño 3D.</p>
+    <p class="muted small">Presupuesto orientativo con precios de ejemplo. Las cantidades son estimaciones a partir del diseño.</p>
     <div class="dlg-actions">
       <button class="btn" id="dlgClose2" type="button">Cerrar</button>
       <button class="btn primary" id="btnPdf" type="button">Descargar PDF</button>

@@ -113,3 +113,71 @@ export function waterNormal() {
     return toTex(c, false);
   });
 }
+
+/* ───────── Texturas reales (CC0, Poly Haven) y normal de agua ───────── */
+// `size` = metros que cubre la imagen (dimensions de info.json). Las UV de la malla se dan ya en "unidades de textura".
+export const REAL = {
+  'stone-light': { size: 4.0, normal: true },
+  'stone-grey': { size: 1.825, normal: true },
+  wood: { size: 2.0, normal: true },
+  liner: { size: 1.8, normal: true },
+};
+export const WATER_NORMAL_METERS = 3.2;
+const real = {}; // se rellena en loadRealTextures()
+
+function prep(t, srgb) {
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8;
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; return t;
+}
+
+// Convierte la foto del relieve de la lámina en un mapa de luminosidad casi neutro (el color lo pone el acabado elegido).
+function linerLuminance(img) {
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d');
+  x.drawImage(img, 0, 0); const im = x.getImageData(0, 0, c.width, c.height), d = im.data;
+  let sum = 0; for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+  const mean = sum / (d.length / 4);
+  for (let i = 0; i < d.length; i += 4) {
+    const l = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2], v = Math.max(0, Math.min(255, 232 + (l - mean) * 0.9));
+    d[i] = d[i + 1] = d[i + 2] = v;
+  }
+  x.putImageData(im, 0, 0); return c;
+}
+
+export async function loadRealTextures(base = 'textures/') {
+  const loader = new THREE.TextureLoader();
+  const load = (f) => loader.loadAsync(base + f);
+  const jobs = Object.keys(REAL).map(async (k) => {
+    try {
+      const [d, n] = await Promise.all([load(k + '_diff.jpg'), load(k + '_nor.jpg')]);
+      let diff = d;
+      if (k === 'stone-light') { // la piedra original es muy anaranjada: se desatura para que parezca piedra caliza clara
+        const c = document.createElement('canvas'); c.width = d.image.width; c.height = d.image.height; const x = c.getContext('2d'); x.filter = 'saturate(0.38) brightness(1.08) contrast(0.92)'; x.drawImage(d.image, 0, 0); diff = new THREE.CanvasTexture(c);
+      }
+      real[k] = { map: prep(k === 'liner' ? new THREE.CanvasTexture(linerLuminance(d.image)) : diff, true), normalMap: prep(n, false) };
+      if (k === 'liner') real[k].map.colorSpace = THREE.SRGBColorSpace;
+    } catch (e) { console.warn('Textura no disponible, se usa la procedural:', k, e); }
+  });
+  jobs.push(load('water_nor.jpg').then((t) => { real.water = prep(t, false); }).catch((e) => console.warn('Normal de agua no disponible', e)));
+  await Promise.all(jobs);
+  return real;
+}
+
+// Siempre devuelven { map, normalMap?, size }, con la textura real si se cargó y la procedural si no.
+export function copingMaps(kind) { return real[kind] ? { ...real[kind], size: REAL[kind].size } : { map: copingTexture(kind), normalMap: null, size: COPING_METERS }; }
+export function linerMaps() { return real.liner ? { ...real.liner, size: REAL.liner.size } : { map: linerTexture(), normalMap: null, size: 2 }; }
+export function waterMaps() { return { normalMap: real.water || waterNormal(), size: real.water ? WATER_NORMAL_METERS : 4 }; }
+
+// Cáusticas: celdas de Voronoi con bordes brillantes, repetibles.
+export function causticsTexture() {
+  return once('caustics', () => {
+    const S = 256, [c, x] = canvas(S, S), r = rng(21), pts = Array.from({ length: 22 }, () => [r() * S, r() * S]);
+    const img = x.createImageData(S, S);
+    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
+      let d1 = 1e9, d2 = 1e9;
+      for (const p of pts) for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) { const d = Math.hypot(i - p[0] - ox, j - p[1] - oy); if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d; }
+      const edge = Math.max(0, 1 - (d2 - d1) / 9), v = Math.pow(edge, 2.2) * 255, k = (j * S + i) * 4;
+      img.data[k] = img.data[k + 1] = img.data[k + 2] = v; img.data[k + 3] = 255;
+    }
+    x.putImageData(img, 0, 0); return toTex(c);
+  });
+}

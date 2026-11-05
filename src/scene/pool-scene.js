@@ -1,11 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
-import { poolOutline, poolFeatures, offsetPoly, poolMetrics } from '../core/pool-math.js';
-import { ledCount } from '../core/quote.js';
-import { grassTexture, pavingTexture, copingTexture, linerTexture, waterNormal, GRASS_METERS, PAVING_METERS, COPING_METERS } from './textures.js';
+import { offsetPoly } from '../core/pool-math.js';
+import { grassTexture, pavingTexture, GRASS_METERS, PAVING_METERS } from './textures.js';
+import { buildPool, toShape, toPath, disposeTree } from './pool-builder.js';
 
-const WATER_DROP = 0.12; // el agua queda 12 cm por debajo del borde
 const PATIO_MARGIN = 2.4; // pavimento alrededor de la coronación
 
 const AMBIENTS = {
@@ -26,38 +25,8 @@ const AMBIENTS = {
   },
 };
 
-// Constructor mínimo de mallas con atributos de color y UV
-class MeshBuilder {
-  constructor() { this.p = []; this.uv = []; this.c = []; this.idx = []; }
-  v(x, y, z, u = 0, w = 0, col = [1, 1, 1]) { this.p.push(x, y, z); this.uv.push(u, w); this.c.push(col[0], col[1], col[2]); return this.p.length / 3 - 1; }
-  tri(a, b, c, want) {
-    const P = this.p, A = new THREE.Vector3(P[a * 3], P[a * 3 + 1], P[a * 3 + 2]), B = new THREE.Vector3(P[b * 3], P[b * 3 + 1], P[b * 3 + 2]), C = new THREE.Vector3(P[c * 3], P[c * 3 + 1], P[c * 3 + 2]);
-    const n = B.sub(A).cross(C.sub(A));
-    if (n.dot(want) < 0) this.idx.push(a, c, b); else this.idx.push(a, b, c);
-  }
-  quad(a, b, c, d, want) { this.tri(a, b, c, want); this.tri(a, c, d, want); }
-  geometry() {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
-    g.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3));
-    g.setIndex(this.idx); g.computeVertexNormals(); return g;
-  }
-}
-
-// Shape de Three a partir de puntos [x,z]. Se rota -90° en X, así que z se invierte.
-function toShape(pts) { const s = new THREE.Shape(); pts.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z))); s.closePath(); return s; }
-function toPath(pts) { const s = new THREE.Path(); pts.forEach(([x, z], i) => (i ? s.lineTo(x, -z) : s.moveTo(x, -z))); s.closePath(); return s; }
 function flatMesh(shape, material, y) { const m = new THREE.Mesh(new THREE.ShapeGeometry(shape), material); m.rotation.x = -Math.PI / 2; m.position.y = y; m.receiveShadow = true; return m; }
 function rectShape(x0, z0, x1, z1) { const s = new THREE.Shape(); s.moveTo(x0, -z0); s.lineTo(x1, -z0); s.lineTo(x1, -z1); s.lineTo(x0, -z1); s.closePath(); return s; }
-
-function disposeTree(g) {
-  g.traverse((o) => {
-    if (o.geometry) o.geometry.dispose();
-    if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
-  });
-  while (g.children.length) g.remove(g.children[0]);
-}
 
 export class PoolScene {
   constructor(canvas, catalog) {
@@ -140,110 +109,23 @@ export class PoolScene {
   }
 
   applyLeds() {
-    const a = AMBIENTS[this.ambient], on = this.cfg && this.cfg.extras.leds;
-    this.ledLights.forEach((l) => { l.intensity = on ? 4 * a.leds : 0; });
-    if (this.water) {
-      const lit = on && a.leds > 0;
-      this.water.material.emissiveIntensity = lit ? 0.55 * a.leds : this.ambient === 'night' ? 0.03 : 0;
-    }
-    if (this.ledDiscs) this.ledDiscs.forEach((d) => { d.material.emissiveIntensity = on ? 0.4 + 2.2 * a.leds : 0; });
+    const a = AMBIENTS[this.ambient];
+    if (this.pool) this.pool.applyLook({ led: a.leds, brightness: { day: 1, dusk: 0.62, night: 0.28 }[this.ambient], caustics: this.ambient === 'night' ? 0.3 : 1, glow: this.ambient === 'night' ? 0.03 : 0 });
   }
 
   update(cfg) {
-    this.cfg = cfg; const cat = this.catalog, copW = cat.copingWidth;
-    disposeTree(this.poolGroup); this.ledLights = []; this.ledDiscs = [];
-    const G = this.poolGroup, pts = poolOutline(cfg), F = poolFeatures(cfg), D = cfg.depth, L = cfg.length, W = cfg.width;
-    const liner = cat.liners.find((x) => x.id === cfg.liner) || cat.liners[0];
-    const coping = cat.copings.find((x) => x.id === cfg.coping) || cat.copings[0];
-    const lc = new THREE.Color(liner.hex), up = new THREE.Vector3(0, 1, 0);
-    const lmap = linerTexture().clone(); lmap.needsUpdate = true;
+    this.cfg = cfg; const cat = this.catalog, copW = cat.copingWidth, L = cfg.length, W = cfg.width;
+    disposeTree(this.poolGroup);
+    const G = this.poolGroup, pool = buildPool(cfg, cat), pts = pool.pts;
+    this.pool = pool; this.water = pool.water; G.add(pool.group);
 
-    // Césped con el hueco del vaso
+    // Césped con el hueco del vaso y patio de pavimento alrededor de la coronación
     const big = rectShape(-250, -250, 250, 250); big.holes.push(toPath(pts));
     G.add(flatMesh(big, this.grass, 0));
-
-    // Patio de pavimento alrededor de la coronación (con hueco hasta el borde de la coronación)
     const pav = pavingTexture().clone(); pav.repeat.set(1 / PAVING_METERS, 1 / PAVING_METERS); pav.needsUpdate = true;
     const patio = rectShape(-L / 2 - PATIO_MARGIN - copW, -W / 2 - PATIO_MARGIN - copW, L / 2 + PATIO_MARGIN + copW, W / 2 + PATIO_MARGIN + copW);
     patio.holes.push(toPath(offsetPoly(pts, copW - 0.01)));
     G.add(flatMesh(patio, new THREE.MeshStandardMaterial({ map: pav, roughness: 0.9 }), 0.012));
-
-    // Vaso: solo caras interiores (paredes hacia dentro y fondo)
-    const top = [lc.r * 1.05, lc.g * 1.05, lc.b * 1.05], bot = [lc.r * 0.5, lc.g * 0.5, lc.b * 0.5];
-    const mb = new MeshBuilder(); let cum = 0; const n = pts.length;
-    for (let i = 0; i < n; i++) {
-      const a = pts[i], b = pts[(i + 1) % n], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      const i0 = mb.v(a[0], 0, a[1], cum, 0, top), i1 = mb.v(b[0], 0, b[1], cum + len, 0, top), i2 = mb.v(b[0], -D, b[1], cum + len, D, bot), i3 = mb.v(a[0], -D, a[1], cum, D, bot);
-      mb.quad(i0, i1, i2, i3, new THREE.Vector3(-(b[1] - a[1]), 0, b[0] - a[0])); cum += len;
-    }
-    const ring = pts.map(([x, z]) => mb.v(x, -D, z, x, z, bot));
-    THREE.ShapeUtils.triangulateShape(pts.map(([x, z]) => new THREE.Vector2(x, z)), []).forEach(([a, b, c]) => mb.tri(ring[a], ring[b], ring[c], up));
-    const shellMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: lmap, roughness: liner.roughness, envMapIntensity: 0.6 });
-    const shell = new THREE.Mesh(mb.geometry(), shellMat); shell.receiveShadow = true; G.add(shell);
-
-    // Playa, escalera romana y escalera de esquina
-    const solid = new THREE.MeshStandardMaterial({ color: lc.clone().multiplyScalar(1.12), map: lmap, roughness: liner.roughness });
-    const block = (geo, x, y, z) => { const m = new THREE.Mesh(geo, solid); m.position.set(x, y, z); m.receiveShadow = true; G.add(m); return m; };
-    if (F.shelf) {
-      const h = D + F.shelf.top - 0.01;
-      block(new THREE.BoxGeometry(F.shelf.length, h, W - 0.02), (F.shelf.x0 + F.shelf.x1) / 2 - 0.005, F.shelf.top - h / 2, 0);
-    }
-    if (F.roman) F.roman.radii.forEach((r, k) => {
-      const top = F.roman.tops[k], h = D + top - 0.01;
-      block(new THREE.CylinderGeometry(r, r, h, 48), F.roman.cx, top - h / 2, F.roman.cz);
-    });
-    if (F.corner) F.corner.steps.forEach((s) => {
-      const h = D + s.top - 0.01;
-      block(new THREE.BoxGeometry(s.length, h, F.corner.width), F.corner.x + s.length / 2 + 0.005, s.top - h / 2, F.corner.z + F.corner.width / 2 + 0.01);
-    });
-
-    // Coronación: franja plana con borde frontal y labio hacia el agua
-    const cmap = copingTexture(coping.texture).clone(); cmap.needsUpdate = true;
-    const outer = offsetPoly(pts, copW), inner = offsetPoly(pts, -0.03), H = 0.04, cb = new MeshBuilder(); let cu = 0; const S = COPING_METERS;
-    for (let i = 0; i < n; i++) {
-      const j = (i + 1) % n, oa = outer[i], ob = outer[j], ia = inner[i], ib = inner[j], len = Math.hypot(ob[0] - oa[0], ob[1] - oa[1]);
-      const u0 = cu / S, u1 = (cu + len) / S, vv = (copW + 0.03) / S;
-      cb.quad(cb.v(ia[0], H, ia[1], u0, 0), cb.v(oa[0], H, oa[1], u0, vv), cb.v(ob[0], H, ob[1], u1, vv), cb.v(ib[0], H, ib[1], u1, 0), up);
-      const out = new THREE.Vector3(ob[1] - oa[1], 0, -(ob[0] - oa[0]));
-      cb.quad(cb.v(oa[0], H, oa[1], u0, 0), cb.v(ob[0], H, ob[1], u1, 0), cb.v(ob[0], 0, ob[1], u1, H / S), cb.v(oa[0], 0, oa[1], u0, H / S), out);
-      cb.quad(cb.v(ia[0], H, ia[1], u0, 0), cb.v(ib[0], H, ib[1], u1, 0), cb.v(ib[0], -0.06, ib[1], u1, (H + 0.06) / S), cb.v(ia[0], -0.06, ia[1], u0, (H + 0.06) / S), out.clone().negate());
-      cu += len;
-    }
-    const cmesh = new THREE.Mesh(cb.geometry(), new THREE.MeshStandardMaterial({ map: cmap, roughness: 0.85, envMapIntensity: 0.4 }));
-    cmesh.castShadow = cmesh.receiveShadow = true; G.add(cmesh);
-
-    // Agua: 12 cm por debajo del borde, semitransparente, con normal map en movimiento
-    const nm = waterNormal().clone(); nm.repeat.set(0.35, 0.35); nm.needsUpdate = true;
-    const tint = lc.clone().lerp(new THREE.Color('#7fd8ea'), 0.6);
-    const water = new THREE.Mesh(new THREE.ShapeGeometry(toShape(offsetPoly(pts, -0.02))),
-      new THREE.MeshPhysicalMaterial({ color: tint, transparent: true, opacity: 0.66, roughness: 0.16, metalness: 0, envMapIntensity: 1.3, normalMap: nm, normalScale: new THREE.Vector2(0.25, 0.25), emissive: tint, emissiveIntensity: 0, depthWrite: false, clearcoat: 0.3 }));
-    water.rotation.x = -Math.PI / 2; water.position.y = -WATER_DROP; water.renderOrder = 2; G.add(water); this.water = water;
-
-    // Focos LED en la pared del fondo
-    if (cfg.extras.leds) {
-      const count = ledCount(poolMetrics(cfg, copW), cat), x0 = -L / 2 + 0.9, x1 = L / 2 - 0.9;
-      for (let i = 0; i < count; i++) {
-        const x = count === 1 ? 0 : x0 + ((x1 - x0) * i) / (count - 1);
-        const disc = new THREE.Mesh(new THREE.CircleGeometry(0.07, 20), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xaeeaff, emissiveIntensity: 0 }));
-        disc.position.set(x, -D * 0.55, -W / 2 + 0.012); G.add(disc); this.ledDiscs.push(disc);
-      }
-      const nLights = Math.min(4, count);
-      for (let i = 0; i < nLights; i++) {
-        const x = nLights === 1 ? 0 : x0 + ((x1 - x0) * i) / (nLights - 1);
-        const pl = new THREE.PointLight(0x9fe8ff, 0, 8, 1.4); pl.position.set(x, -D * 0.55, -W / 2 + 0.35); G.add(pl); this.ledLights.push(pl);
-      }
-    }
-
-    // Ducha exterior
-    if (cfg.extras.shower) {
-      const sg = new THREE.Group(), chrome = new THREE.MeshStandardMaterial({ color: 0xc9ced2, metalness: 0.85, roughness: 0.25 });
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 12), chrome); pole.position.y = 1.1;
-      const headM = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 20), chrome); headM.position.set(0.12, 2.2, 0);
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.14, 8), chrome); arm.rotation.z = Math.PI / 2; arm.position.set(0.05, 2.2, 0);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.06, 20), new THREE.MeshStandardMaterial({ color: 0x777b7d, roughness: 0.7 })); base.position.y = 0.03;
-      [pole, headM, arm, base].forEach((m) => { m.castShadow = true; sg.add(m); });
-      sg.position.set(-L / 2 + 0.9, 0.012, W / 2 + copW + 1.1); G.add(sg);
-    }
 
     // Dos tumbonas en el patio del fondo
     const lounger = (x, z) => {
@@ -255,7 +137,6 @@ export class PoolScene {
       g.position.set(x, 0.012, z); g.rotation.y = Math.PI / 2; return g;
     };
     const zb = -(W / 2 + copW + 0.95); G.add(lounger(-L / 4, zb), lounger(L / 4 - 0.4, zb));
-
     this.applyLeds();
   }
 
@@ -266,9 +147,11 @@ export class PoolScene {
   snapshot(type = 'image/jpeg', q = 0.92) { this.renderer.render(this.scene, this.camera); return this.canvas.toDataURL(type, q); }
 
   loop(now) {
-    this.controls.update();
-    if (this.water) { const m = this.water.material.normalMap, t = (now - this.t0) / 1000; m.offset.set(t * 0.012, t * 0.008); }
-    this.renderer.render(this.scene, this.camera);
+    if (this.visible !== false) {
+      this.controls.update();
+      if (this.pool) this.pool.tick((now - this.t0) / 1000);
+      this.renderer.render(this.scene, this.camera);
+    }
     requestAnimationFrame(this.loop);
   }
 }

@@ -1,0 +1,43 @@
+{
+ "stone-light": {
+  "id": "floor_tiles_04",
+  "dimensions": [
+   4000,
+   4000
+  ],
+  "authors": [
+   "Rob Tuytel"
+  ]
+ },
+ "stone-grey": {
+  "id": "concrete_tiles_02",
+  "dimensions": [
+   1825.0000476837158,
+   1825.0000476837158
+  ],
+  "authors": [
+   "Charlotte Baglioni"
+  ]
+ },
+ "wood": {
+  "id": "wooden_planks",
+  "dimensions": [
+   2000,
+   2000
+  ],
+  "authors": [
+   "Dario Barresi",
+   "Charlotte Baglioni"
+  ]
+ },
+ "liner": {
+  "id": "anti_skid_tiles",
+  "dimensions": [
+   1800.0000715255737,
+   1800.0000715255737
+  ],
+  "authors": [
+   "Amal Kumar"
+  ]
+ }
+}
