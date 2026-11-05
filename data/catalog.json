@@ -1,0 +1,41 @@
+{
+  "_nota": "Precios y nombres de ejemplo. Sin relación con ningún fabricante real.",
+  "currency": "EUR",
+  "vat": 0.21,
+  "wasteFactor": 1.08,
+  "copingWidth": 0.35,
+  "limits": {
+    "length": { "min": 3, "max": 15, "step": 0.1, "default": 8 },
+    "width": { "min": 2, "max": 7, "step": 0.1, "default": 4 },
+    "depth": { "min": 0.9, "max": 2.5, "step": 0.1, "default": 1.5 }
+  },
+  "shapes": [
+    { "id": "rect", "name": "Rectangular", "hint": "Clásica y fácil de cubrir", "labourFactor": 1.0, "fixedPrice": 0 },
+    { "id": "ele", "name": "En L", "hint": "Zona de baño y zona de juego", "labourFactor": 1.15, "fixedPrice": 0 },
+    { "id": "playa", "name": "Playa y romana", "hint": "Playa sumergida y escalera romana", "labourFactor": 1.2, "fixedPrice": 1450, "fixedLabel": "Estructura de playa y escalera romana" }
+  ],
+  "liners": [
+    { "id": "bruma", "name": "Azul Bruma", "hex": "#3d9bd1", "pricePerM2": 26, "roughness": 0.55 },
+    { "id": "esmeralda", "name": "Cala Esmeralda", "hex": "#2fa597", "pricePerM2": 29, "roughness": 0.55 },
+    { "id": "duna", "name": "Arena Duna", "hex": "#d8c7a3", "pricePerM2": 28, "roughness": 0.6 },
+    { "id": "nube", "name": "Gris Nube", "hex": "#9aa3a8", "pricePerM2": 31, "roughness": 0.5 },
+    { "id": "grafito", "name": "Grafito Noche", "hex": "#454d54", "pricePerM2": 36, "roughness": 0.45 },
+    { "id": "perla", "name": "Blanco Perla", "hex": "#e9eeee", "pricePerM2": 33, "roughness": 0.5 }
+  ],
+  "copings": [
+    { "id": "piedra-clara", "name": "Piedra clara", "texture": "stone-light", "pricePerMl": 62 },
+    { "id": "gris", "name": "Gris", "texture": "stone-grey", "pricePerMl": 54 },
+    { "id": "madera", "name": "Madera", "texture": "wood", "pricePerMl": 88 }
+  ],
+  "extras": {
+    "stairs": { "name": "Escalera de esquina", "price": 780 },
+    "leds": { "name": "Focos LED", "unitPrice": 145, "areaPerUnit": 10, "min": 2 },
+    "shower": { "name": "Ducha exterior", "price": 320 }
+  },
+  "labour": {
+    "excavationPerM3": 28,
+    "linerInstallPerM2": 14,
+    "copingInstallPerMl": 24,
+    "baseFixed": 450
+  }
+}
