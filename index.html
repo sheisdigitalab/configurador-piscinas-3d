@@ -80,6 +80,14 @@ input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
 .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 .check{display:flex;align-items:center;gap:10px;font-size:var(--fs-s);font-weight:600;min-height:32px}
 .check input{width:18px;height:18px;accent-color:var(--accent)}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.scene{position:relative;height:84px;border-radius:8px;border:1px solid var(--line);background-size:cover;background-position:center;padding:0;overflow:hidden;text-align:left}
+.scene span{position:absolute;left:0;right:0;bottom:0;background:rgba(10,18,20,.72);color:#fff;font-size:var(--fs-s);font-weight:600;padding:5px 8px}
+.scene[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
+.sel{width:100%;height:40px;border:1px solid var(--line);border-radius:8px;padding:0 12px;background:var(--bg)}
+input[type=color]{width:38px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:none}
+.hdl{fill:#fff;stroke:#0b7a85;stroke-width:3;pointer-events:auto;cursor:pointer;touch-action:none}
+.hdl.rot{fill:#3cc0cc;cursor:grab}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .add{height:auto;min-height:44px;padding:10px 12px;border-radius:var(--r);justify-content:flex-start;text-align:left}
 .list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -155,10 +163,10 @@ dialog .foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
     <section class="pane on" id="pane-foto">
       <h3>Foto de la casa</h3>
       <p class="sub">Sube una foto del jardín o la parcela del cliente. Después alinea el suelo para que la piscina quede bien apoyada.</p>
-      <div class="grid2" style="margin-bottom:14px">
-        <label class="btn primary" style="justify-content:center;cursor:pointer">Subir foto<input id="file" type="file" accept="image/*" hidden></label>
-        <button class="btn" id="btnSample" type="button" style="justify-content:center">Jardín de ejemplo</button>
-      </div>
+      <label class="btn primary" style="justify-content:center;cursor:pointer;width:100%;margin-bottom:14px">Subir foto de la casa<input id="file" type="file" accept="image/*" hidden></label>
+      <div class="lab" style="font-size:var(--fs-s);font-weight:600;margin-bottom:8px">Escenarios de ejemplo</div>
+      <div class="scenes" id="sceneList"></div>
+      <button class="btn" id="btnSample" type="button" hidden></button>
       <div class="group">
         <label class="check"><input type="checkbox" id="chkAlign"> Modo alinear suelo (rejilla y horizonte)</label>
         <p class="sub" style="margin-top:6px">Con el modo activo verás una rejilla de 1 m. Ajusta los tres controles hasta que coincida con el suelo de la foto.</p>
@@ -233,15 +241,24 @@ dialog .foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 import * as THREE from 'three';
 
 /* ───────── Datos ───────── */
+// Catálogo de láminas. `img` es opcional: foto de detalle del producto (carpeta local, no se publica).
+const IMG = 'referencia-alkorplan/Products/';
 const LINERS = [
-  {id:'adriatico', name:'Azul Adriático', c:'#2f86b5'},
-  {id:'cielo',     name:'Azul Cielo',     c:'#62b6dd'},
-  {id:'caribe',    name:'Verde Caribe',   c:'#2aa79b'},
-  {id:'arena',     name:'Arena',          c:'#d8c39a'},
-  {id:'blanco',    name:'Blanco',         c:'#eef2f2'},
-  {id:'perla',     name:'Gris Perla',     c:'#a9b1b4'},
-  {id:'antracita', name:'Gris Antracita', c:'#4b5559'},
-  {id:'negro',     name:'Negro',          c:'#1d2123'},
+  {id:'a2000-adriatic', name:'Alkorplan 2000 · Adriatic Blue',    c:'#2bb0e0', img:IMG+'2000/Preview_OK/Adriatic_Blue_Ok.jpeg'},
+  {id:'a2000-lightblue',name:'Alkorplan 2000 · Light Blue',       c:'#8fb8cc', img:IMG+'2000/Preview_OK/Light_Blue_Ok.jpeg'},
+  {id:'a2000-caribbean',name:'Alkorplan 2000 · Caribbean Green',  c:'#4fb3bf', img:IMG+'2000/Preview_OK/Caribbean_Green_Ok.jpeg'},
+  {id:'a2000-sand',     name:'Alkorplan 2000 · Sand',             c:'#dccdb4', img:IMG+'2000/Preview_OK/Sand_Ok.jpeg'},
+  {id:'a2000-white',    name:'Alkorplan 2000 · White',            c:'#e6e5e6', img:IMG+'2000/Preview_OK/White_Ok.jpeg'},
+  {id:'a2000-lightgrey',name:'Alkorplan 2000 · Light Grey',       c:'#9a9aa6', img:IMG+'2000/Preview_OK/Light_Grey_Ok.jpeg'},
+  {id:'a2000-darkgrey', name:'Alkorplan 2000 · Dark Grey',        c:'#5c5d68', img:IMG+'2000/Preview_OK/Dark_Grey_Ok.jpeg'},
+  {id:'a2000-black',    name:'Alkorplan 2000 · Black',            c:'#2a2a2f', img:IMG+'2000/Preview_OK/Black_Ok.jpeg'},
+  {id:'touch-authentic',name:'Alkorplan Touch · Authentic',       c:'#c9783c', img:IMG+'TOUCH/Preview/Authentic.jpg'},
+  {id:'touch-sublime',  name:'Alkorplan Touch · Sublime',         c:'#b48d74', img:IMG+'TOUCH/Preview/Sublime.jpg'},
+  {id:'touch-relax',    name:'Alkorplan Touch · Relax',           c:'#e8b987', img:IMG+'TOUCH/Preview/Relax.jpg'},
+  {id:'touch-vanity',   name:'Alkorplan Touch · Vanity',          c:'#c8c3be', img:IMG+'TOUCH/Preview/Vanity.jpg'},
+  {id:'touch-origin',   name:'Alkorplan Touch · Origin',          c:'#a9a6aa', img:IMG+'TOUCH/Preview/Origin.jpg'},
+  {id:'touch-prestige', name:'Alkorplan Touch · Prestige',        c:'#575455', img:IMG+'TOUCH/Preview/Prestige.jpg'},
+  {id:'touch-elegance', name:'Alkorplan Touch · Elegance',        c:'#262a33', img:IMG+'TOUCH/Preview/Elegance.jpg'},
 ];
 const TILES = [
   {id:'piedra',    name:'Piedra clara',  base:'#d9cfbf', grout:'#b3a894', tile:.6,  gap:3},
@@ -255,7 +272,7 @@ const FURN_COLORS = ['#f2efe8','#9a9fa2','#3a3f42','#a47b52'];
 const PARASOL_COLORS = ['#f2efe8','#d86f4b','#2f6f8f','#e5c46b','#3a3f42'];
 const NAMES = {pool:'Piscina',pavement:'Pavimento',lounger:'Tumbona',parasol:'Sombrilla',olive:'Olivo',bush:'Arbusto',hedge:'Seto'};
 const DEFAULTS = {
-  pool:()=>({w:8,l:4,d:1.5,r:.5,stairs:'esquina',liner:'adriatico',coping:true,copW:.45,copMat:'piedra'}),
+  pool:()=>({shape:'rect',w:8,l:4,d:1.5,r:.5,stairs:'esquina',stairSide:-1,liner:'a2000-adriatic',customColor:'#2bb0e0',coping:true,copW:.45,copMat:'piedra'}),
   pavement:()=>({w:4,l:3,mat:'madera'}),
   lounger:()=>({color:'#f2efe8',s:1}),
   parasol:()=>({color:'#d86f4b',s:1}),
@@ -383,54 +400,120 @@ function mat(color,extra={}){return new THREE.MeshStandardMaterial({color,roughn
 function mesh(geo,m,{cast=true}={}){const o=new THREE.Mesh(geo,m);o.castShadow=cast;o.receiveShadow=true;return o}
 
 /* ───────── Constructores de objetos ───────── */
+function roundPoly(P,r,seg=6){
+  const n=P.length,out=[];
+  for(let i=0;i<n;i++){
+    const a=P[(i+n-1)%n],b=P[i],c=P[(i+1)%n];
+    const d1=a.clone().sub(b),d2=c.clone().sub(b),l1=d1.length(),l2=d2.length();
+    d1.normalize();d2.normalize();
+    const k=Math.min(r,l1/2,l2/2);
+    const p1=b.clone().addScaledVector(d1,k),p2=b.clone().addScaledVector(d2,k);
+    for(let s=0;s<=seg;s++){const t=s/seg,u=1-t;out.push(new THREE.Vector2(u*u*p1.x+2*u*t*b.x+t*t*p2.x,u*u*p1.y+2*u*t*b.y+t*t*p2.y))}
+  }
+  return out;
+}
+// desplaza cada vértice hacia fuera (t>0) o dentro (t<0), conservando el número de puntos
+function offsetPoly(P,t){
+  const n=P.length;
+  return P.map((b,i)=>{
+    const a=P[(i+n-1)%n],c=P[(i+1)%n];
+    const e1=b.clone().sub(a).normalize(),e2=c.clone().sub(b).normalize();
+    const n1=new THREE.Vector2(e1.y,-e1.x),n2=new THREE.Vector2(e2.y,-e2.x);
+    const m=n1.clone().add(n2); m.length()>1e-6?m.normalize():m.copy(n2);
+    const cos=Math.max(.5,m.dot(n2));
+    return b.clone().addScaledVector(m,t/cos);
+  });
+}
+function fitBox(P,w,l){
+  let a=1e9,b=-1e9,c=1e9,d=-1e9;
+  P.forEach(q=>{a=Math.min(a,q.x);b=Math.max(b,q.x);c=Math.min(c,q.y);d=Math.max(d,q.y)});
+  return P.map(q=>new THREE.Vector2((q.x-(a+b)/2)*w/(b-a),(q.y-(c+d)/2)*l/(d-c)));
+}
+const SHAPES=[['rect','Rectangular'],['oval','Ovalada'],['ele','En L'],['rinon','Riñón']];
+// contorno de la piscina (antihorario en x,z)
+function poolPts(p){
+  const w=p.w,l=p.l;
+  if(p.shape==='oval'){
+    const P=[];for(let i=0;i<64;i++){const a=i/64*Math.PI*2;P.push(new THREE.Vector2(w/2*Math.cos(a),l/2*Math.sin(a)))}
+    return P;
+  }
+  if(p.shape==='rinon'){
+    const P=[];for(let i=0;i<72;i++){const a=i/72*Math.PI*2;P.push(new THREE.Vector2(w/2*Math.cos(a),l/2*Math.sin(a)+.6*l*Math.cos(a)**2))}
+    return fitBox(P,w,l);
+  }
+  if(p.shape==='ele'){
+    const V=(x,z)=>new THREE.Vector2(x,z);
+    return roundPoly([V(-w/2,-l/2),V(w/2,-l/2),V(w/2,l*.05),V(w*.15,l*.05),V(w*.15,l/2),V(-w/2,l/2)],Math.max(p.r,.2));
+  }
+  const V=(x,z)=>new THREE.Vector2(x,z);
+  return roundPoly([V(-w/2,-l/2),V(w/2,-l/2),V(w/2,l/2),V(-w/2,l/2)],Math.max(p.r,.03));
+}
+function linerOf(p){return p.liner==='custom'?{id:'custom',name:'Color personalizado',c:p.customColor||'#2bb0e0'}:getLiner(p.liner)}
+function edgeX(pts,z0,z1,sx){
+  let sel=pts.filter(q=>q.y>=z0&&q.y<=z1); if(!sel.length)sel=pts;
+  const xs=sel.map(q=>q.x); return sx<0?Math.min(...xs):Math.max(...xs);
+}
 function buildPool(o){
   const p=o.p, body=o.body; disposeGroup(body);
-  const liner=getLiner(p.liner), lc=new THREE.Color(liner.c);
+  const liner=linerOf(p), lc=new THREE.Color(liner.c);
   const top=lc.clone().multiplyScalar(1.05), bot=lc.clone().multiplyScalar(.5);
-  const pts=outline(p.w,p.l,p.r), n=pts.length, d=p.d;
+  const pts=poolPts(p), n=pts.length, d=p.d, up=new THREE.Vector3(0,1,0);
   const mb=new MB(); let cum=0;
   for(let i=0;i<n;i++){
     const a=pts[i],b=pts[(i+1)%n],len=a.distanceTo(b);
-    const mx=(a.x+b.x)/2,mz=(a.y+b.y)/2;
     const i0=mb.v(a.x,0,a.y,cum,0,top),i1=mb.v(b.x,0,b.y,cum+len,0,top);
     const i2=mb.v(b.x,-d,b.y,cum+len,d,bot),i3=mb.v(a.x,-d,a.y,cum,d,bot);
-    mb.quad(i0,i1,i2,i3,new THREE.Vector3(-mx,0,-mz));
+    mb.quad(i0,i1,i2,i3,new THREE.Vector3(-(b.y-a.y),0,b.x-a.x));
     cum+=len;
   }
-  const c0=mb.v(0,-d,0,0,0,bot), ring=pts.map(q=>mb.v(q.x,-d,q.y,q.x,q.y,bot));
-  for(let i=0;i<n;i++)mb.tri(c0,ring[i],ring[(i+1)%n],new THREE.Vector3(0,1,0));
-  const shell=mesh(mb.geo(),new THREE.MeshStandardMaterial({vertexColors:true,map:(()=>{const t=linerTexture().clone();t.needsUpdate=true;t.userData.clone=true;return t})(),roughness:.55}),{cast:false});
+  const ring=pts.map(q=>mb.v(q.x,-d,q.y,q.x,q.y,bot));
+  THREE.ShapeUtils.triangulateShape(pts,[]).forEach(([a,b,c])=>mb.tri(ring[a],ring[b],ring[c],up));
+  const linerMap=(()=>{const t=linerTexture().clone();t.needsUpdate=true;t.userData.clone=true;return t})();
+  const shell=mesh(mb.geo(),new THREE.MeshStandardMaterial({vertexColors:true,map:linerMap,roughness:.55}),{cast:false});
   body.add(shell);
 
   // suelo invisible con hueco: tapa el interior de la piscina por debajo del terreno
   {
     const sh=new THREE.Shape(); const R=300;
     sh.moveTo(-R,-R);sh.lineTo(R,-R);sh.lineTo(R,R);sh.lineTo(-R,R);sh.closePath();
-    const hole=new THREE.Path(); const hp=outline(p.w,p.l,p.r).reverse();
+    const hole=new THREE.Path(); const hp=pts.slice().reverse();
     hole.moveTo(hp[0].x,-hp[0].y); for(let i=1;i<hp.length;i++)hole.lineTo(hp[i].x,-hp[i].y); hole.closePath();
     sh.holes.push(hole);
     const gm=new THREE.Mesh(new THREE.ShapeGeometry(sh),new THREE.MeshBasicMaterial({colorWrite:false,side:THREE.DoubleSide}));
     gm.rotation.x=-Math.PI/2; gm.position.y=-.001; gm.renderOrder=-1; gm.raycast=()=>{};
     body.add(gm);
   }
-  // escalera
+  // escaleras
   if(p.stairs!=='none'){
-    const steps=Math.max(1,Math.min(3,Math.floor((d-.3)/.3)));
-    const sw=p.stairs==='ancho'?Math.max(.6,p.l-2*Math.max(p.r,.1)-.02):Math.min(1.8,p.l-2*p.r-.1);
-    const zc=p.stairs==='ancho'?0:-(p.l/2)+p.r+sw/2+.02;
-    const sm=new THREE.MeshStandardMaterial({color:lc.clone().multiplyScalar(1.12),map:shell.material.map,roughness:.55});
-    for(let k=0;k<steps;k++){
-      const len=.32*(k+1), topY=-.3*(k+1), hgt=d+topY-.01;
-      const g=new THREE.BoxGeometry(len,hgt,sw);
-      const b=mesh(g,sm,{cast:false});
-      b.position.set(-p.w/2+len/2+.01, topY-hgt/2, zc);
-      body.add(b);
+    const sx=p.stairSide<0?-1:1, steps=Math.max(1,Math.min(3,Math.floor((d-.3)/.3)));
+    const sm=new THREE.MeshStandardMaterial({color:lc.clone().multiplyScalar(1.12),map:linerMap,roughness:.55});
+    const rr=Math.max(p.r,.1);
+    if(p.stairs==='romana'){
+      for(let k=0;k<steps;k++){
+        const R=Math.min(p.l*.46,.55+.42*k), topY=-.3*(k+1), hgt=d+topY-.01;
+        const cy=mesh(new THREE.CylinderGeometry(R,R,hgt,40),sm,{cast:false});
+        cy.position.set(edgeX(pts,-R,R,sx)+.01*(-sx)*0,topY-hgt/2,0);
+        body.add(cy);
+      }
+    } else if(p.stairs==='banco'){
+      const bw=Math.max(1,p.w*.7), by=-.5, hgt=d+by-.01, zz=sx<0?-p.l/2:p.l/2;
+      const b=mesh(new THREE.BoxGeometry(bw,hgt,.5),sm,{cast:false}); b.position.set(0,by-hgt/2,zz+(sx<0?.2:-.2)); body.add(b);
+    } else {
+      const sw=p.stairs==='ancho'?Math.max(.8,p.l*(p.shape==='rect'?1:.7)-2*(p.shape==='rect'?rr:0)-.02):Math.min(1.8,p.l*.55);
+      const zc=p.stairs==='ancho'?0:-(p.l/2)+sw/2+rr*.9+.05;
+      const x0=edgeX(pts,zc-sw/2,zc+sw/2,sx);
+      for(let k=0;k<steps;k++){
+        const len=.32*(k+1), topY=-.3*(k+1), hgt=d+topY-.01;
+        const b=mesh(new THREE.BoxGeometry(len+.05,hgt,sw),sm,{cast:false});
+        b.position.set(x0-sx*(len/2)+sx*.02,topY-hgt/2,zc);
+        body.add(b);
+      }
     }
   }
   // agua
-  const wm=new MB(), wp=outline(p.w-.02,p.l-.02,p.r), wc=wm.v(0,-.15,0,0,0);
+  const wm=new MB(), wp=offsetPoly(pts,-.015);
   const wr=wp.map(q=>wm.v(q.x,-.15,q.y,q.x/3,q.y/3));
-  for(let i=0;i<n;i++)wm.tri(wc,wr[i],wr[(i+1)%n],new THREE.Vector3(0,1,0));
+  THREE.ShapeUtils.triangulateShape(wp,[]).forEach(([a,b,c])=>wm.tri(wr[a],wr[b],wr[c],up));
   const wtint=lc.clone().lerp(new THREE.Color('#7fe0ef'),.55);
   const rip=rippleTexture().clone(); rip.needsUpdate=true; rip.userData.clone=true;
   const water=new THREE.Mesh(wm.geo(),new THREE.MeshStandardMaterial({color:wtint,map:rip,transparent:true,opacity:.62,roughness:.08,metalness:.1,emissive:wtint,emissiveIntensity:0,depthWrite:false}));
@@ -442,23 +525,22 @@ function buildPool(o){
   // coronación
   if(p.coping){
     const t=p.copW, def=getTile(p.copMat), tex=tileTexture(def), size=def.size;
-    const outer=outline(p.w+2*t,p.l+2*t,p.r+t), inner=outline(p.w+.04,p.l+.04,p.r);
+    const outer=offsetPoly(pts,t), inner=offsetPoly(pts,.02);
     const H=.04, cm=new MB(), white=new THREE.Color(1,1,1); let cu=0;
     for(let i=0;i<n;i++){
       const j=(i+1)%n, oa=outer[i],ob=outer[j],ia=inner[i],ib=inner[j], len=oa.distanceTo(ob);
       const u0=cu/size,u1=(cu+len)/size,vv=t/size;
       const v0=cm.v(ia.x,H,ia.y,u0,0,white),v1=cm.v(oa.x,H,oa.y,u0,vv,white),v2=cm.v(ob.x,H,ob.y,u1,vv,white),v3=cm.v(ib.x,H,ib.y,u1,0,white);
-      cm.quad(v0,v1,v2,v3,new THREE.Vector3(0,1,0));
-      const mx=(oa.x+ob.x)/2,mz=(oa.y+ob.y)/2;
+      cm.quad(v0,v1,v2,v3,up);
+      const out=new THREE.Vector3(ob.y-oa.y,0,-(ob.x-oa.x));
       const s0=cm.v(oa.x,H,oa.y,u0,0,white),s1=cm.v(ob.x,H,ob.y,u1,0,white),s2=cm.v(ob.x,0,ob.y,u1,H/size,white),s3=cm.v(oa.x,0,oa.y,u0,H/size,white);
-      cm.quad(s0,s1,s2,s3,new THREE.Vector3(mx,0,mz));
-      const kx=(ia.x+ib.x)/2,kz=(ia.y+ib.y)/2;
+      cm.quad(s0,s1,s2,s3,out);
       const k0=cm.v(ia.x,H,ia.y,u0,0,white),k1=cm.v(ib.x,H,ib.y,u1,0,white),k2=cm.v(ib.x,-.05,ib.y,u1,(H+.05)/size,white),k3=cm.v(ia.x,-.05,ia.y,u0,(H+.05)/size,white);
-      cm.quad(k0,k1,k2,k3,new THREE.Vector3(-kx,0,-kz));
+      cm.quad(k0,k1,k2,k3,out.clone().negate());
       cu+=len;
     }
     const cmesh=mesh(cm.geo(),new THREE.MeshStandardMaterial({map:tex,roughness:.85}));
-    cmesh.userData.keepTex=true; body.add(cmesh);
+    body.add(cmesh);
   }
 }
 function buildPavement(o){
@@ -661,20 +743,65 @@ function duplicate(o){
   n.group.rotation.y=o.group.rotation.y; select(n);
 }
 
-/* ───────── Overlay de selección ───────── */
+/* ───────── Overlay de selección y tiradores ───────── */
+const svgEl=$('#overlay'), hdls={};
+function hdl(k){
+  if(!hdls[k]){
+    const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('r',k==='rot'?15:12); c.setAttribute('class','hdl '+(k==='rot'?'rot':'')); c.dataset.k=k;
+    c.addEventListener('pointerdown',startHandle); c.addEventListener('pointermove',moveHandle);
+    c.addEventListener('pointerup',endHandle); c.addEventListener('pointercancel',endHandle);
+    svgEl.append(c); hdls[k]=c;
+  }
+  return hdls[k];
+}
 function updateOverlay(){
   const poly=$('#selPoly'), chip=$('#chip');
-  if(!selected){poly.setAttribute('points','');chip.hidden=true;return}
+  if(!selected){poly.setAttribute('points','');chip.hidden=true;Object.values(hdls).forEach(c=>c.style.display='none');return}
   const [fw,fl]=footprint(selected), g=selected.group, c=Math.cos(g.rotation.y), s=Math.sin(g.rotation.y);
   const pts=[[-fw/2,-fl/2],[fw/2,-fl/2],[fw/2,fl/2],[-fw/2,fl/2]].map(([x,z])=>{
     const v=new THREE.Vector3(g.position.x+x*c+z*s,.02,g.position.z-x*s+z*c).project(camera);
     return[(v.x*.5+.5)*W,(-v.y*.5+.5)*H];
   });
   poly.setAttribute('points',pts.map(p=>p.join(',')).join(' '));
-  const minY=Math.min(...pts.map(p=>p[1])), cx=pts.reduce((a,p)=>a+p[0],0)/4;
+  const minY=Math.min(...pts.map(p=>p[1])), cx=pts.reduce((a,p)=>a+p[0],0)/4, cy=pts.reduce((a,p)=>a+p[1],0)/4;
   chip.hidden=false; chip.textContent=NAMES[selected.type];
   chip.style.left=clamp(cx,40,W-40)+'px'; chip.style.top=clamp(minY-6,26,H)+'px';
+  pts.forEach((p,i)=>{const e=hdl('c'+i);e.style.display='';e.setAttribute('cx',p[0]);e.setAttribute('cy',p[1])});
+  const mx=(pts[0][0]+pts[1][0])/2, my=(pts[0][1]+pts[1][1])/2, dx=mx-cx, dy=my-cy, dl=Math.hypot(dx,dy)||1;
+  const r=hdl('rot'); r.style.display=''; r.setAttribute('cx',clamp(mx+dx/dl*34,16,W-16)); r.setAttribute('cy',clamp(my+dy/dl*34,16,H-16));
+  chip.style.top=Math.max(26,minY-44)+'px';
 }
+let hd=null, hdPending=false;
+function startHandle(e){
+  e.stopPropagation(); e.preventDefault();
+  if(!selected)return;
+  hd={k:e.target.dataset.k,o:selected,d0:null,s0:selected.p.s};
+  e.target.setPointerCapture(e.pointerId); hideHint();
+}
+function moveHandle(e){
+  if(!hd)return;
+  const o=hd.o,g=o.group,p=o.p;
+  setPtr(e); const hit=groundHit(); if(!hit)return;
+  const dx=hit.x-g.position.x, dz=hit.z-g.position.z;
+  if(hd.k==='rot'){
+    let a=THREE.MathUtils.radToDeg(Math.atan2(-dx,-dz)), st=15, sn=Math.round(a/st)*st;
+    if(Math.abs(a-sn)<3)a=sn;
+    g.rotation.y=THREE.MathUtils.degToRad(a); return;
+  }
+  const c=Math.cos(g.rotation.y), s=Math.sin(g.rotation.y);
+  const lx=Math.abs(dx*c-dz*s), lz=Math.abs(dx*s+dz*c);
+  if(o.type==='pool'){const t=p.coping?p.copW:0;p.w=clamp(2*lx-2*t,2,16);p.l=clamp(2*lz-2*t,1.5,8)}
+  else if(o.type==='pavement'){p.w=clamp(2*lx,.5,16);p.l=clamp(2*lz,.5,16)}
+  else if(o.type==='hedge'){p.l=clamp(2*lx,.5,12)}
+  else{
+    const dist=Math.hypot(dx,dz); if(hd.d0==null)hd.d0=Math.max(.2,dist);
+    const lim=o.type==='lounger'||o.type==='parasol'?[.7,1.4]:[.5,2];
+    p.s=clamp(hd.s0*dist/hd.d0,lim[0],lim[1]);
+  }
+  if(!hdPending){hdPending=true;requestAnimationFrame(()=>{hdPending=false;if(hd)rebuild(hd.o)})}
+}
+function endHandle(){ if(!hd)return; const o=hd.o; hd=null; rebuild(o); renderProps(); }
 
 /* ───────── Bucle ───────── */
 const clock=new THREE.Clock();
@@ -712,6 +839,11 @@ function segmented(opts,cur,cb){
   opts.forEach(([v,l])=>{const b=h('button',{type:'button','aria-pressed':String(v===cur)},l);b.addEventListener('click',()=>{wrap.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');cb(v)});wrap.append(b)});
   return wrap;
 }
+function dropdown(opts,cur,cb){
+  const s=h('select',{class:'sel'});
+  opts.forEach(([v,l])=>{const op=h('option',{value:v},l);if(v===cur)op.selected=true;s.append(op)});
+  s.addEventListener('change',()=>cb(s.value)); return s;
+}
 const field=(label,node)=>h('div',{class:'row'},h('div',{class:'lab'},h('span',{},label)),node);
 const m1=v=>v.toFixed(1)+' m', m2=v=>v.toFixed(2)+' m', deg=v=>Math.round(v)+'°';
 let rotSlider=null;
@@ -736,14 +868,22 @@ function renderProps(){
   const g2=h('div',{class:'group'});
   const R=()=>rebuild(o);
   if(o.type==='pool'){
+    const corners=slider('Esquinas redondeadas',0,2,.05,p.r,m2,v=>{p.r=v;R()});
+    const showCorners=()=>{corners.style.display=(p.shape==='rect'||p.shape==='ele')?'':'none'};
+    const colorIn=h('input',{type:'color',value:p.customColor,'aria-label':'Color personalizado'});
+    colorIn.addEventListener('input',()=>{p.customColor=colorIn.value;p.liner='custom';swWrap.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));R()});
+    const swWrap=swatches(LINERS,p.liner,v=>{p.liner=v;R()},it=>it.img||it.c);
     g2.append(
-      slider('Largo',3,16,.1,p.w,m1,v=>{p.w=v;R()}),
-      slider('Ancho',2,8,.1,p.l,m1,v=>{p.l=v;R()}),
+      field('Forma',dropdown(SHAPES,p.shape,v=>{p.shape=v;showCorners();R()})),
+      slider('Largo',2,16,.1,p.w,m1,v=>{p.w=v;R()}),
+      slider('Ancho',1.5,8,.1,p.l,m1,v=>{p.l=v;R()}),
       slider('Profundidad',.8,2.8,.1,p.d,m1,v=>{p.d=v;R()}),
-      slider('Esquinas redondeadas',0,2,.05,p.r,m2,v=>{p.r=v;R()}),
-      field('Escalera',segmented([['none','Sin'],['esquina','Esquina'],['ancho','Todo el ancho']],p.stairs,v=>{p.stairs=v;R()})),
-      field('Revestimiento',swatches(LINERS,p.liner,v=>{p.liner=v;R()},it=>it.c)),
-    );
+      corners,
+      field('Escalera',dropdown([['none','Sin escalera'],['esquina','En esquina'],['ancho','Todo el ancho'],['romana','Romana (redonda)'],['banco','Banco o playa']],p.stairs,v=>{p.stairs=v;R()})),
+      field('Lado de la escalera',segmented([[-1,'Izquierda'],[1,'Derecha']],p.stairSide,v=>{p.stairSide=v;R()})),
+      field('Revestimiento',swWrap),
+      h('div',{class:'row'},h('label',{class:'check'},colorIn,'Color personalizado')),
+    ); showCorners();
     const g3=h('div',{class:'group'});
     const chk=h('input',{type:'checkbox'}); chk.checked=p.coping;
     const cw=slider('Ancho de la coronación',.2,1.2,.05,p.copW,m2,v=>{p.copW=v;R()});
@@ -808,10 +948,10 @@ bindSeg('#segTime',v=>{state.time=v;applyTime()});
 bindSeg('#segWater',v=>{state.water=v==='1';applyTime()});
 
 // foto
-function loadPhoto(src,{sample=false}={}){
+function loadPhoto(src,{preset=null}={}){
   photo.onload=()=>{
     fitStage();
-    if(sample){Object.assign(state,{hz:.38,camH:3,fov:60})}
+    if(preset){Object.assign(state,preset)}
     else{Object.assign(state,{hz:.45,camH:2,fov:60});setAlign(true);setTab('foto');toast('Alinea el suelo con el horizonte y la rejilla')}
     updateCamera();syncCam();
   };
@@ -844,7 +984,31 @@ function drawSample(){
   const im=x.getImageData(0,0,w,hh),d=im.data;for(let i=0;i<d.length;i+=4){const n=(Math.random()-.5)*8;d[i]+=n;d[i+1]+=n;d[i+2]+=n}x.putImageData(im,0,0);
   return c.toDataURL('image/jpeg',.9);
 }
-$('#btnSample').addEventListener('click',()=>{setAlign(false);loadPhoto(drawSample(),{sample:true})});
+const SAMPLE_URL=drawSample();
+const SCENES=[
+  {id:'jardin',name:'Jardín con césped',src:SAMPLE_URL,preset:{hz:.38,camH:3,fov:60},setup(){
+    addObject('pool',{},{x:0,z:-7.5});
+    addObject('pavement',{w:5,l:2.4,mat:'madera'},{x:6.4,z:-7.5});
+    addObject('lounger',{},{x:-5.6,z:-6.8}).group.rotation.y=Math.PI/2;
+    addObject('lounger',{},{x:-5.6,z:-8.2}).group.rotation.y=Math.PI/2;
+    addObject('parasol',{},{x:-7.2,z:-7.5});
+    addObject('olive',{},{x:-9,z:-11});
+  }},
+  {id:'pergola',name:'Patio con pérgola',src:'escenarios/patio-pergola.png',preset:{hz:.33,camH:2.6,fov:66},setup(){
+    addObject('pool',{w:4.6,l:2.2,r:.4,copW:.35,stairs:'ancho'},{x:.6,z:-4.2});
+  }},
+];
+function setScene(sc){
+  [...objects].forEach(removeObject); select(null); setAlign(false);
+  loadPhoto(sc.src,{preset:sc.preset}); sc.setup(); applyTime();
+  document.querySelectorAll('#sceneList button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.id===sc.id)));
+}
+SCENES.forEach(sc=>{
+  const b=h('button',{type:'button',class:'scene','data-id':sc.id,'aria-pressed':'false','aria-label':sc.name,title:sc.name,onclick:()=>setScene(sc)},h('span',{},sc.name));
+  b.style.backgroundImage=`url(${sc.src})`; $('#sceneList').append(b);
+  if(!sc.src.startsWith('data:')){const t=new Image();t.onerror=()=>b.remove();t.src=sc.src}
+});
+$('#btnSample').remove();
 $('#file').addEventListener('change',e=>{const f=e.target.files[0];if(f)useFile(f)});
 function useFile(f){
   if(!f.type.startsWith('image/')){toast('Elige un archivo de imagen');return}
@@ -872,7 +1036,7 @@ function summary(){
   const L=[];
   for(const o of objects){
     const p=o.p;
-    if(o.type==='pool')L.push(`Piscina ${p.w.toFixed(1)} × ${p.l.toFixed(1)} m, ${p.d.toFixed(1)} m de profundidad · ${getLiner(p.liner).name}${p.coping?` · coronación ${getTile(p.copMat).name.toLowerCase()} (${p.copW.toFixed(2)} m)`:''} · escalera: ${{none:'sin',esquina:'en esquina',ancho:'todo el ancho'}[p.stairs]}`);
+    if(o.type==='pool')L.push(`Piscina ${p.w.toFixed(1)} × ${p.l.toFixed(1)} m, ${p.d.toFixed(1)} m de profundidad · ${linerOf(p).name}${p.coping?` · coronación ${getTile(p.copMat).name.toLowerCase()} (${p.copW.toFixed(2)} m)`:''} · escalera: ${{none:'sin',esquina:'en esquina',ancho:'todo el ancho'}[p.stairs]}`);
     else if(o.type==='pavement')L.push(`Pavimento ${p.w.toFixed(1)} × ${p.l.toFixed(1)} m · ${getTile(p.mat).name}`);
     else L.push(NAMES[o.type]);
   }
@@ -892,13 +1056,7 @@ $('#quoteForm').addEventListener('submit',e=>{e.preventDefault();$('#qOk').hidde
 
 /* ───────── Arranque ───────── */
 refreshAdd();refreshList();renderProps();syncCam();
-loadPhoto(drawSample(),{sample:true});
-addObject('pool',{},{x:0,z:-7.5});
-addObject('pavement',{w:5,l:2.4,mat:'madera'},{x:6.4,z:-7.5});
-addObject('lounger',{},{x:-5.6,z:-6.8}).group.rotation.y=Math.PI/2;
-addObject('lounger',{},{x:-5.6,z:-8.2}).group.rotation.y=Math.PI/2;
-addObject('parasol',{},{x:-7.2,z:-7.5});
-addObject('olive',{},{x:-9,z:-11});
+setScene(SCENES[0]);
 frame();
 window.__app={state,objects,scene,camera};
 </script>
