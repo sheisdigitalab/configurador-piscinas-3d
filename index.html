@@ -132,7 +132,7 @@ dialog .foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 </head>
 <body>
 <header>
-  <div class="brand"><b>Piscinas Marea</b><span>Configurador 3D sobre la foto de tu cliente</span></div>
+  <div class="brand"><b>Azuria Piscinas</b><span>Configurador 3D sobre la foto de tu cliente</span></div>
   <div class="actions">
     <button class="btn" id="btnDownload" type="button"><span aria-hidden="true">↓</span><span class="t">Descargar imagen</span><span class="sr" hidden>Descargar imagen</span></button>
     <button class="btn primary" id="btnQuote" type="button"><span class="t">Solicitar presupuesto</span><span class="m">Presupuesto</span></button>
@@ -242,23 +242,23 @@ import * as THREE from 'three';
 
 /* ───────── Datos ───────── */
 // Catálogo de láminas. `img` es opcional: foto de detalle del producto (miniatura reducida).
-const IMG = 'catalogo/Products/';
+const IMG = 'catalogo/';
 const LINERS = [
-  {id:'a2000-adriatic', name:'Alkorplan 2000 · Adriatic Blue',    c:'#2bb0e0', img:IMG+'2000/Preview_OK/Adriatic_Blue_Ok.jpeg'},
-  {id:'a2000-lightblue',name:'Alkorplan 2000 · Light Blue',       c:'#8fb8cc', img:IMG+'2000/Preview_OK/Light_Blue_Ok.jpeg'},
-  {id:'a2000-caribbean',name:'Alkorplan 2000 · Caribbean Green',  c:'#4fb3bf', img:IMG+'2000/Preview_OK/Caribbean_Green_Ok.jpeg'},
-  {id:'a2000-sand',     name:'Alkorplan 2000 · Sand',             c:'#dccdb4', img:IMG+'2000/Preview_OK/Sand_Ok.jpeg'},
-  {id:'a2000-white',    name:'Alkorplan 2000 · White',            c:'#e6e5e6', img:IMG+'2000/Preview_OK/White_Ok.jpeg'},
-  {id:'a2000-lightgrey',name:'Alkorplan 2000 · Light Grey',       c:'#9a9aa6', img:IMG+'2000/Preview_OK/Light_Grey_Ok.jpeg'},
-  {id:'a2000-darkgrey', name:'Alkorplan 2000 · Dark Grey',        c:'#5c5d68', img:IMG+'2000/Preview_OK/Dark_Grey_Ok.jpeg'},
-  {id:'a2000-black',    name:'Alkorplan 2000 · Black',            c:'#2a2a2f', img:IMG+'2000/Preview_OK/Black_Ok.jpeg'},
-  {id:'touch-authentic',name:'Alkorplan Touch · Authentic',       c:'#c9783c', img:IMG+'TOUCH/Preview/Authentic.jpg'},
-  {id:'touch-sublime',  name:'Alkorplan Touch · Sublime',         c:'#b48d74', img:IMG+'TOUCH/Preview/Sublime.jpg'},
-  {id:'touch-relax',    name:'Alkorplan Touch · Relax',           c:'#e8b987', img:IMG+'TOUCH/Preview/Relax.jpg'},
-  {id:'touch-vanity',   name:'Alkorplan Touch · Vanity',          c:'#c8c3be', img:IMG+'TOUCH/Preview/Vanity.jpg'},
-  {id:'touch-origin',   name:'Alkorplan Touch · Origin',          c:'#a9a6aa', img:IMG+'TOUCH/Preview/Origin.jpg'},
-  {id:'touch-prestige', name:'Alkorplan Touch · Prestige',        c:'#575455', img:IMG+'TOUCH/Preview/Prestige.jpg'},
-  {id:'touch-elegance', name:'Alkorplan Touch · Elegance',        c:'#262a33', img:IMG+'TOUCH/Preview/Elegance.jpg'},
+  {id:'lisa-adriatico',name:'Serie Lisa · Azul Adriático',c:'#2bb0e0',img:IMG+'lisa-adriatico.jpg'},
+  {id:'lisa-cielo',name:'Serie Lisa · Azul Cielo',c:'#8fb8cc',img:IMG+'lisa-cielo.jpg'},
+  {id:'lisa-caribe',name:'Serie Lisa · Verde Caribe',c:'#4fb3bf',img:IMG+'lisa-caribe.jpg'},
+  {id:'lisa-arena',name:'Serie Lisa · Arena',c:'#dccdb4',img:IMG+'lisa-arena.jpg'},
+  {id:'lisa-blanco',name:'Serie Lisa · Blanco',c:'#e6e5e6',img:IMG+'lisa-blanco.jpg'},
+  {id:'lisa-perla',name:'Serie Lisa · Gris Perla',c:'#9a9aa6',img:IMG+'lisa-perla.jpg'},
+  {id:'lisa-grafito',name:'Serie Lisa · Gris Grafito',c:'#5c5d68',img:IMG+'lisa-grafito.jpg'},
+  {id:'lisa-negro',name:'Serie Lisa · Negro',c:'#2a2a2f',img:IMG+'lisa-negro.jpg'},
+  {id:'textil-terracota',name:'Serie Textil · Terracota',c:'#c9783c',img:IMG+'textil-terracota.jpg'},
+  {id:'textil-taupe',name:'Serie Textil · Taupe',c:'#b48d74',img:IMG+'textil-taupe.jpg'},
+  {id:'textil-durazno',name:'Serie Textil · Durazno',c:'#e8b987',img:IMG+'textil-durazno.jpg'},
+  {id:'textil-piedra',name:'Serie Textil · Piedra clara',c:'#c8c3be',img:IMG+'textil-piedra.jpg'},
+  {id:'textil-humo',name:'Serie Textil · Gris humo',c:'#a9a6aa',img:IMG+'textil-humo.jpg'},
+  {id:'textil-ceniza',name:'Serie Textil · Ceniza',c:'#575455',img:IMG+'textil-ceniza.jpg'},
+  {id:'textil-noche',name:'Serie Textil · Noche',c:'#262a33',img:IMG+'textil-noche.jpg'},
 ];
 const TILES = [
   {id:'piedra',    name:'Piedra clara',  base:'#d9cfbf', grout:'#b3a894', tile:.6,  gap:3},
@@ -272,7 +272,7 @@ const FURN_COLORS = ['#f2efe8','#9a9fa2','#3a3f42','#a47b52'];
 const PARASOL_COLORS = ['#f2efe8','#d86f4b','#2f6f8f','#e5c46b','#3a3f42'];
 const NAMES = {pool:'Piscina',pavement:'Pavimento',lounger:'Tumbona',parasol:'Sombrilla',olive:'Olivo',bush:'Arbusto',hedge:'Seto'};
 const DEFAULTS = {
-  pool:()=>({shape:'rect',w:8,l:4,d:1.5,r:.5,stairs:'esquina',stairSide:-1,liner:'a2000-adriatic',customColor:'#2bb0e0',coping:true,copW:.45,copMat:'piedra'}),
+  pool:()=>({shape:'rect',w:8,l:4,d:1.5,r:.5,stairs:'esquina',stairSide:-1,liner:'lisa-adriatico',customColor:'#2bb0e0',coping:true,copW:.45,copMat:'piedra'}),
   pavement:()=>({w:4,l:3,mat:'madera'}),
   lounger:()=>({color:'#f2efe8',s:1}),
   parasol:()=>({color:'#d86f4b',s:1}),
