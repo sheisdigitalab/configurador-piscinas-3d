@@ -146,7 +146,7 @@ tr.grp td{text-align:left;font-weight:700;color:var(--accent);border-bottom:0;pa
 #overlay.inert .pt{pointer-events:none;opacity:.55}
 #quad{fill:rgba(255,255,255,.07);stroke:#fff;stroke-width:2;stroke-dasharray:7 5;vector-effect:non-scaling-stroke}
 #quad.open{fill:none}
-.chip{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);max-width:92%;padding:8px 16px;border-radius:999px;background:rgba(10,20,24,.8);color:#fff;font-size:var(--fs-s);font-weight:600;text-align:center;pointer-events:none;z-index:3}
+.chip{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);max-width:92%;padding:9px 18px;border-radius:999px;background:rgba(10,20,24,.9);color:#fff;font-size:var(--fs-s);font-weight:600;text-align:center;pointer-events:none;z-index:3}
 .chip.warn{background:#a23b2a}
 .hint{display:none}
 .photo-only{display:none}
@@ -154,8 +154,8 @@ tr.grp td{text-align:left;font-weight:700;color:var(--accent);border-bottom:0;pa
 .file-btn{display:flex;align-items:center;justify-content:center;width:100%;cursor:pointer}
 .gallery{display:block;margin:8px 0 14px;text-align:center;font-size:var(--fs-s);font-weight:600;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .samples{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.sample{position:relative;height:72px;border-radius:10px;border:1px solid var(--line);background-size:cover;background-position:center;padding:0;overflow:hidden}
-.sample span{position:absolute;left:0;right:0;bottom:0;background:rgba(10,18,20,.72);color:#fff;font-size:var(--fs-s);font-weight:600;padding:3px 6px;text-align:left;line-height:1.25}
+.sample{position:relative;height:84px;border-radius:10px;border:1px solid var(--line);background-size:cover;background-position:center;padding:0;overflow:hidden}
+.sample span{position:absolute;left:0;right:0;bottom:0;background:rgba(10,18,20,.86);color:#fff;font-size:var(--fs-s);font-weight:600;padding:6px 10px;text-align:left;line-height:1.25}
 .sample[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:2px}
 .steps{margin:0 0 14px;padding-left:20px;font-size:var(--fs-s);color:var(--muted);line-height:1.55}
 .tools{display:grid;gap:10px;margin-bottom:14px}
